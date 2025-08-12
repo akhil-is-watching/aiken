@@ -206,7 +206,8 @@ where
         let warnings_json = serde_json::json!({
             "warnings": warnings.iter().map(|w| {
                 serde_json::json!({
-                    "message": format!("{}", w),
+                    "message": format!("{:?}", w),
+                    "display": format!("{}", w),
                     "type": "warning"
                 })
             }).collect::<Vec<_>>()
@@ -233,7 +234,8 @@ where
             let errors_json = serde_json::json!({
                 "errors": errs.iter().map(|e| {
                     serde_json::json!({
-                        "message": format!("{}", e),
+                        "message": format!("{:?}", e),
+                        "display": format!("{}", e),
                         "type": "error"
                     })
                 }).collect::<Vec<_>>(),
