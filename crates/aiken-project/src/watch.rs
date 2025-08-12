@@ -2,6 +2,7 @@ use crate::{Project, config::WorkspaceConfig, telemetry::EventTarget};
 use miette::{Diagnostic, IntoDiagnostic};
 use notify::{Event, RecursiveMode, Watcher};
 use owo_colors::{OwoColorize, Stream::Stderr};
+use serde_json;
 use std::{
     collections::VecDeque,
     env,
@@ -200,6 +201,17 @@ where
             eprintln!();
             warning.report()
         }
+    } else if !is_terminal && !suppress_warnings && !warnings.is_empty() {
+        // Output warnings as JSON when not in terminal mode
+        let warnings_json = serde_json::json!({
+            "warnings": warnings.iter().map(|w| {
+                serde_json::json!({
+                    "message": format!("{}", w),
+                    "type": "warning"
+                })
+            }).collect::<Vec<_>>()
+        });
+        println!("{}", serde_json::to_string_pretty(&warnings_json).unwrap());
     }
 
     if !errs.is_empty() {
@@ -216,6 +228,22 @@ where
                     error_count: errs.len(),
                 }
             );
+        } else {
+            // Output errors as JSON when not in terminal mode
+            let errors_json = serde_json::json!({
+                "errors": errs.iter().map(|e| {
+                    serde_json::json!({
+                        "message": format!("{}", e),
+                        "type": "error"
+                    })
+                }).collect::<Vec<_>>(),
+                "summary": {
+                    "checks": check_count,
+                    "warnings": warning_count,
+                    "errors": errs.len()
+                }
+            });
+            println!("{}", serde_json::to_string_pretty(&errors_json).unwrap());
         }
 
         return Err(ExitFailure::into_report());
@@ -230,6 +258,16 @@ where
                 warning_count
             }
         );
+    } else if !is_terminal && show_summary {
+        // Output summary as JSON when not in terminal mode
+        let summary_json = serde_json::json!({
+            "summary": {
+                "checks": check_count,
+                "warnings": warning_count,
+                "errors": 0
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&summary_json).unwrap());
     }
 
     if warning_count > 0 && deny {
